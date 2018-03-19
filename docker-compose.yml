@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  message-listener-service:
+    build: ./message-listener-service
+    volumes:
+      - ./message-listener-service:/usr/src/message-listener
+    ports:
+      - 9090:9091
+  message-processor-service:
+    build: ./message-processor-service
+    volumes:
+      - ./message-processor-service:/usr/src/message-processor
+    ports:
+      - 9099:9099
