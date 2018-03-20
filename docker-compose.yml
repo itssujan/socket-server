@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  message-listener-service:
+    build: ./message-listener-service
+    volumes:
+      - ./message-listener-service:/usr/src/message-listener
+    ports:
+      - 9090:9091
+  message-processor-service:
+    build: ./message-processor-service
+    volumes:
+      - ./message-processor-service:/usr/src/message-processor
+    ports:
+      - 9099:9099
+  rabbit1:
+    image: "rabbitmq:3-management"
+    hostname: "rabbit1"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "secret_cookie"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq1"
