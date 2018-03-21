@@ -1,4 +1,5 @@
 const net = require("net");
+var amqp = require("amqplib/callback_api");
 
 var server = net.createServer();
 server.on("connection", handleConnection);
@@ -18,7 +19,8 @@ function handleConnection(conn) {
   conn.on("error", onConnError);
 
   function onConnData(d) {
-    console.log("****connection11 data from %s: %j", remoteAddress, d);
+    //console.log("****connection11 data from %s: %j", remoteAddress, d);
+    addMessageToQueue(d);
   }
 
   function onConnClose() {
@@ -28,4 +30,21 @@ function handleConnection(conn) {
   function onConnError(err) {
     console.log("Connection %s error: %s", remoteAddress, err.message);
   }
+}
+
+function addMessageToQueue(d) {
+  //todo-- fix the ip address issue
+  // amqp.connect("amqp://rabbitmq:rabbitmq@172.18.0.2:5672", function(err, con) {
+  //   if (err) {
+  //     console.log(err);
+  //   }
+  //   con.createChannel(function(err, ch) {
+  //     var q = "test";
+  //
+  //     ch.assertQueue(q, { durable: false });
+  //     // Note: on Node 6 Buffer.from(msg) should be used
+  //     ch.sendToQueue(q, new Buffer(d));
+  //     //console.log(" [x] Sent " + d);
+  //   });
+  // });
 }

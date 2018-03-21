@@ -1,8 +1,4 @@
-# Back-end Developer Challenge: Follower Maze
-
-Thanks for trying our development challenge!
-
-With this document you should have received two other files:
+The client directory has two files
 
 * `followermaze.sh`, an executable bash script
 * `FollowerMaze-assembly-2.0.jar`, a JAR file to be executed on a JDK 7 JVM
@@ -10,10 +6,6 @@ With this document you should have received two other files:
 If you haven't received any of these, or if you think there are any
 problems with the files, please contact us immediately and
 we will re-send you the missing pieces.
-
-**IMPORTANT**: we have anonymised code reviews so please ensure you omit any
-personal details from your challenge response which note your gender, age,
-ethnicity, etc.
 
 ## The Challenge
 

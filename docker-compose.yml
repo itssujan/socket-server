@@ -3,26 +3,39 @@ version: '3'
 services:
   message-listener-service:
     build: ./message-listener-service
+    depends_on:
+      - rabbitmq
+    command:
+      nodemon --watch index.js
     volumes:
-      - ./message-listener-service:/usr/src/message-listener
+      - ./message-listener-service:/usr/src/app
     ports:
       - 9090:9091
+    links:
+      - rabbitmq
   message-processor-service:
     build: ./message-processor-service
+    depends_on:
+      - rabbitmq
+    command:
+      nodemon --watch index.js
     volumes:
-      - ./message-processor-service:/usr/src/message-processor
+      - ./message-processor-service:/usr/src/app
     ports:
       - 9099:9099
-  rabbit1:
+    links:
+      - rabbitmq
+  rabbitmq:
     image: "rabbitmq:3-management"
     hostname: "rabbit1"
     environment:
-      RABBITMQ_ERLANG_COOKIE: "secret_cookie"
       RABBITMQ_DEFAULT_USER: "rabbitmq"
       RABBITMQ_DEFAULT_PASS: "rabbitmq"
-      RABBITMQ_DEFAULT_VHOST: "/"
     ports:
       - "15672:15672"
       - "5672:5672"
-    labels:
-      NAME: "rabbitmq1"
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:15672"]
+        interval: 30s
+        timeout: 10s
+        retries: 5

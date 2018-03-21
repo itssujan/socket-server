@@ -1,7 +1,8 @@
 FROM node:latest
-WORKDIR /usr/src/message-processor
+WORKDIR /usr/src/app
 COPY package*.json ./
+RUN npm install -g nodemon
 RUN npm install
 COPY . .
 EXPOSE 9099
-CMD [ "npm", "start" ]
+CMD [ "node", "index.js" ]
