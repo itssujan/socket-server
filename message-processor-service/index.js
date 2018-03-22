@@ -1,18 +1,39 @@
+const express = require("express");
+const amqp = require("amqp");
 const net = require("net");
-const amqp = require("amqplib/callback_api");
+const HashMap = require("hashmap");
+
+const Event = require("./app/models/event.js");
+const PriorityQueue = require("./app/queue/PriorityQueue");
 
 let server = net.createServer();
-let users = [];
-server.on("connection", handleConnection);
-consumeMessages();
+const app = express();
+const connection = amqp.createConnection({
+  host: "172.18.0.2",
+  port: "5672",
+  login: "rabbitmq",
+  password: "rabbitmq"
+});
 
+const CONTROL_CHARACTER = "\n";
+const EVENT_SEPARATOR = "|";
+
+let userMap = new HashMap();
+let followerMap = new HashMap();
+let pQueue = new PriorityQueue();
+
+server.on("connection", handleConnection);
 server.listen(9099, function() {
   console.log("server listening to %j", server.address());
 });
 
+// pQueue.on("popAvailable", e => {
+//   console.log("*****************Got event........" + JSON.stringify(e));
+// });
+
 function handleConnection(conn) {
-  var remoteAddress = conn.remoteAddress + ":" + conn.remotePort;
-  console.log("new client connection from %s", remoteAddress);
+  let remoteAddress = conn.remoteAddress + ":" + conn.remotePort;
+  console.log("Got connection :" + conn.remoteAddress);
 
   conn.setEncoding("utf8");
 
@@ -21,9 +42,10 @@ function handleConnection(conn) {
   conn.on("error", onConnError);
 
   function onConnData(d) {
-    let tmp = d.trim().split("\n");
-    users = users.concat(tmp);
-    console.log(users.length);
+    let users = d.trim().split(CONTROL_CHARACTER);
+    let userID = users[0];
+    userMap.set(userID, conn);
+    followerMap.set(userID, []);
   }
 
   function onConnClose() {
@@ -31,24 +53,133 @@ function handleConnection(conn) {
   }
 
   function onConnError(err) {
-    console.log("Connection %s error: %s", remoteAddress, err.message);
+    console.log("***** ERRORRR : " + err);
   }
 }
 
-function consumeMessages() {
-  amqp.connect("amqp://rabbitmq:rabbitmq@172.18.0.2:5672", function(err, conn) {
-    conn.createChannel(function(err, ch) {
-      var q = "test";
+// add this for better debuging
+connection.on("error", function(e) {
+  // console.log("Error connecting RabbitMQ..will keep retrying ", e);
+});
 
-      ch.assertQueue(q, { durable: false });
-      //console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q);
-      ch.consume(
-        q,
-        function(msg) {
-          console.log(" [x] Received %s", msg.content.toString());
-        },
-        { noAck: true }
-      );
-    });
+// Wait for connection to become established.
+connection.on("ready", function() {
+  console.log("Connected to RabbitMQ");
+  let exchange = connection.exchange("soundcloud_exchange");
+  let queue = connection.queue("event_queue");
+  queue.bind("soundcloud_exchange", "key.b.a");
+  console.log("Exchange :" + exchange);
+  console.log("Queue :" + queue);
+
+  queue.subscribe(function(message) {
+    let eventStr = message.data.toString();
+    let event = getEvent(eventStr);
+    pQueue.enqueue(event, parseInt(event.sequence));
   });
-}
+});
+
+//move it to observer pattern...
+let deQueue = () => {
+  let item = pQueue.dequeue();
+  if (item) {
+    processEvent(item.element);
+  }
+};
+
+setInterval(function() {
+  deQueue();
+}, 100);
+
+let addToUsers = d => {
+  users.concat(d.trim().split(CONTROL_CHARACTER));
+};
+
+let getEvent = eventStr => {
+  let strArray = eventStr.split(EVENT_SEPARATOR);
+  let e = new Event(strArray[0], strArray[1], eventStr);
+  if (strArray[2]) {
+    e.setFromUserID(strArray[2]);
+  }
+  if (strArray[3]) {
+    e.setToUserID(strArray[3]);
+  }
+  return e;
+};
+
+let processEvent = event => {
+  // console.log("Processing " + JSON.stringify(event));
+  switch (event.type) {
+    case "F":
+      notifyFollow(event);
+      break;
+    case "U":
+      unfollow(event);
+      break;
+    case "B":
+      notifyBroadcast(event);
+      break;
+    case "P":
+      notifyPrivateMessage(event);
+      break;
+    case "S":
+      notifyStatusUpdate(event);
+      break;
+    default:
+      console.log("Unknown event");
+  }
+};
+
+let sendEvent = function(e, uid) {
+  let con = userMap.get(uid);
+  if (con) {
+    con.write(e.rawEvent);
+  }
+};
+
+let addFollower = event => {
+  let followers = followerMap.get(event.toUserID);
+  if (!followers || followers.length == 0) {
+    followers = [];
+  }
+  followers.push(event.fromUserID);
+  followerMap.set(event.toUserID, followers);
+};
+
+let unfollow = event => {
+  let followers = followerMap.get(event.toUserID);
+  if (
+    followers &&
+    followers.length > 0 &&
+    followers.includes(event.fromUserID)
+  ) {
+    followers = followers.filter(e => e !== event.fromUserID);
+    followerMap.set(event.toUserID, followers);
+  }
+};
+
+let notifyFollow = event => {
+  addFollower(event);
+  sendEvent(event, event.toUserID);
+};
+
+let notifyBroadcast = event => {
+  // console.log("Got broadcast event");
+  userMap.forEach(function(con, userID) {
+    sendEvent(event, userID);
+  });
+};
+
+let notifyPrivateMessage = event => {
+  // console.log("Got pvt message event");
+  sendEvent(event, event.toUserID);
+};
+
+let notifyStatusUpdate = event => {
+  let followers = followerMap.get(event.fromUserID);
+  // console.log(followers);
+  if (followers.length > 0) {
+    followers.forEach(function(follower) {
+      sendEvent(event, follower);
+    });
+  }
+};

@@ -10,7 +10,7 @@ services:
     volumes:
       - ./message-listener-service:/usr/src/app
     ports:
-      - 9090:9091
+      - 9090:9090
     links:
       - rabbitmq
   message-processor-service:
