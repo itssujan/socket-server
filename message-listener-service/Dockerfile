@@ -4,5 +4,5 @@ RUN npm install -g nodemon
 COPY package*.json ./
 RUN npm install
 COPY . .
-EXPOSE 9091
+EXPOSE 9090
 CMD [ "node", "index.js" ]

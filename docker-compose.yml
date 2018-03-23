@@ -27,15 +27,9 @@ services:
       - rabbitmq
   rabbitmq:
     image: "rabbitmq:3-management"
-    hostname: "rabbit1"
     environment:
       RABBITMQ_DEFAULT_USER: "rabbitmq"
       RABBITMQ_DEFAULT_PASS: "rabbitmq"
     ports:
       - "15672:15672"
       - "5672:5672"
-    healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:15672"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
