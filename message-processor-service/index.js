@@ -2,6 +2,7 @@ const express = require("express");
 const amqp = require("amqp");
 const net = require("net");
 const HashMap = require("hashmap");
+let i = 0;
 
 const Event = require("./app/models/event.js");
 const PriorityQueue = require("./app/queue/PriorityQueue");
@@ -26,10 +27,6 @@ server.on("connection", handleConnection);
 server.listen(9099, function() {
   console.log("server listening to %j", server.address());
 });
-
-// pQueue.on("popAvailable", e => {
-//   console.log("*****************Got event........" + JSON.stringify(e));
-// });
 
 function handleConnection(conn) {
   let remoteAddress = conn.remoteAddress + ":" + conn.remotePort;
@@ -73,22 +70,26 @@ connection.on("ready", function() {
 
   queue.subscribe(function(message) {
     let eventStr = message.data.toString();
+    // console.log("Receiving message : " + eventStr);
     let event = getEvent(eventStr);
-    pQueue.enqueue(event, parseInt(event.sequence));
+    if (event) {
+      pQueue.enqueue(event, parseInt(event.sequence));
+      attemptDequeue();
+    }
   });
 });
 
-//move it to observer pattern...
-let deQueue = () => {
-  let item = pQueue.dequeue();
-  if (item) {
-    processEvent(item.element);
-  }
-};
-
-setInterval(function() {
-  deQueue();
-}, 100);
+function attemptDequeue() {
+  // console.log("Attempt dequeue");
+  let e;
+  do {
+    e = pQueue.dequeue();
+    if (e) {
+      // console.log("Emitting " + JSON.stringify(e));
+      processEvent(e.element);
+    }
+  } while (e);
+}
 
 let addToUsers = d => {
   users.concat(d.trim().split(CONTROL_CHARACTER));
@@ -96,14 +97,24 @@ let addToUsers = d => {
 
 let getEvent = eventStr => {
   let strArray = eventStr.split(EVENT_SEPARATOR);
-  let e = new Event(strArray[0], strArray[1], eventStr);
-  if (strArray[2]) {
-    e.setFromUserID(strArray[2]);
+  if (
+    strArray &&
+    strArray.length >= 2 &&
+    !isNaN(strArray[0]) &&
+    isNaN(strArray[1])
+  ) {
+    let e = new Event(strArray[0], strArray[1], eventStr);
+    if (strArray[2]) {
+      e.setFromUserID(strArray[2]);
+    }
+    if (strArray[3]) {
+      e.setToUserID(strArray[3]);
+    }
+    return e;
+  } else {
+    console.log("******* Ignoring " + eventStr);
   }
-  if (strArray[3]) {
-    e.setToUserID(strArray[3]);
-  }
-  return e;
+  return null;
 };
 
 let processEvent = event => {
@@ -132,6 +143,7 @@ let processEvent = event => {
 let sendEvent = function(e, uid) {
   let con = userMap.get(uid);
   if (con) {
+    // console.log("Sending " + i++);
     con.write(e.rawEvent);
   }
 };
@@ -176,8 +188,7 @@ let notifyPrivateMessage = event => {
 
 let notifyStatusUpdate = event => {
   let followers = followerMap.get(event.fromUserID);
-  // console.log(followers);
-  if (followers.length > 0) {
+  if (followers && followers.length > 0) {
     followers.forEach(function(follower) {
       sendEvent(event, follower);
     });

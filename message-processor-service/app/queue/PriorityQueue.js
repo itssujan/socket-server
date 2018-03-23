@@ -1,6 +1,3 @@
-const util = require("util");
-const EventEmitter = require("events").EventEmitter;
-
 let QElement = require("./QElement");
 
 // PriorityQueue class
@@ -8,12 +5,10 @@ class PriorityQueue {
   constructor() {
     this.items = [];
     this.currentPriority = 1;
-    EventEmitter.call(this);
-    this.emitting = false;
   }
 
   enqueue(element, priority) {
-    console.log("Adding to queue****************");
+    // console.log("Adding to queue " + priority);
     let qElement = new QElement(element, priority);
     let contain = false;
 
@@ -28,12 +23,6 @@ class PriorityQueue {
     if (!contain) {
       this.items.push(qElement);
     }
-    // if (!emitting) {
-    //   console.log("Trying to inform subscribers ********");
-    //   this.informSubscribers();
-    // } else {
-    //   console.log("Sorry **********");
-    // }
   }
 
   dequeue() {
@@ -41,7 +30,16 @@ class PriorityQueue {
     if (!this.isEmpty() && this.currentPriority == this.items[0].priority) {
       this.currentPriority++;
       return this.items.shift();
+    } else if (this.currentPriority > this.items[0].priority) {
+      console.log(
+        "**************** Removing " + JSON.stringify(this.items[0].element)
+      );
+      this.items.shift();
     } else {
+      // console.log(
+      //   "Cant find " + this.currentPriority + " , " + this.items[0].priority
+      // );
+      // console.log(JSON.stringify(this.items[0]));
       return null;
     }
   }
@@ -66,22 +64,6 @@ class PriorityQueue {
       str += JSON.stringify(this.items[i].element) + " ";
     return str;
   }
-
-  informSubscribers() {
-    while (!this.isEmpty()) {
-      console.log("Emitting***********");
-      let e = this.dequeue();
-      this.emitting = true;
-      if (e) {
-        this.emit("popAvailable", e);
-      }
-    }
-    if (this.isEmpty()) {
-      console.log("nothing to emit*********");
-      this.emitting = false;
-    }
-  }
 }
 
-util.inherits(PriorityQueue, EventEmitter);
 module.exports = PriorityQueue;
