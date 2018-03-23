@@ -1,7 +1,7 @@
 FROM node:latest
 WORKDIR /usr/src/app
+COPY package*.json /usr/src/app
 RUN npm install -g nodemon
-COPY package*.json ./
 RUN npm install
 COPY . .
 EXPOSE 9090

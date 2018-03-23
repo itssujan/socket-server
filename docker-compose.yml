@@ -6,9 +6,10 @@ services:
     depends_on:
       - rabbitmq
     command:
-      nodemon --watch index.js
+      node index.js
     volumes:
       - ./message-listener-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - 9090:9090
     links:
@@ -18,9 +19,10 @@ services:
     depends_on:
       - rabbitmq
     command:
-      nodemon --watch index.js
+      node index.js
     volumes:
       - ./message-processor-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - 9099:9099
     links:
