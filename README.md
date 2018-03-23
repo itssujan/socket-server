@@ -11,7 +11,7 @@ This starts off both the services and the rabbitmq instance.
 More details about the services can be found in the service directories.
 
 
-##Challenge
+## Challenge
 
 Implementation of a coding challenge I encountered on some website.
 
