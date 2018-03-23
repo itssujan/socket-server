@@ -5,7 +5,7 @@ Processes high volumes of various events and sends it to the appropriate users
 ## Usage
 Install docker : https://docs.docker.com/install/
 
-docket-compose up --build
+docker-compose up --build
 
 This starts off both the services and the rabbitmq instance.
 More details about the services can be found in the service directories.
